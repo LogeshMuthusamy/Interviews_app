@@ -1,0 +1,100 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Streamlit
+.streamlit/
+
+# Data and Reports (comment out if you want to track these)
+data/*.json
+reports/*.pdf
+reports/*.txt
+reports/*.json
+
+# Keep directory structure but ignore contents
+!data/.gitkeep
+!reports/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Model cache
+.cache/
+models/
+*.pkl
+*.pth
+*.bin
+*.onnx
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Environment variables
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Audio/Video temporary files
+*.wav
+*.mp3
+*.mp4
+*.avi
+temp_audio/
+temp_video/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Documentation builds
+docs/_build/
+
+# Database backups
+*.db
+*.sqlite
+*.sqlite3

@@ -1,0 +1,55 @@
+# Core dependencies
+streamlit>=1.28.0
+python-dotenv>=1.0.0
+
+# Speech recognition and audio processing
+SpeechRecognition>=3.10.0
+pyaudio>=0.2.13
+pydub>=0.25.1
+
+# Text-to-Speech
+gTTS>=2.4.0
+pyttsx3>=2.90
+
+# NLP and ML
+sentence-transformers>=2.2.2
+textblob>=0.17.1
+transformers>=4.35.0
+torch>=2.0.0
+numpy>=1.24.0
+
+# PDF generation
+fpdf>=1.7.2
+reportlab>=4.0.7
+
+# Resume PDF text extraction
+pdfminer.six>=20231228
+
+# Data handling
+pandas>=2.0.0
+pymongo>=4.6.0  # Optional: for MongoDB support
+
+# Utilities
+Pillow>=10.0.0
+opencv-python>=4.8.0  # For video processing
+matplotlib>=3.7.0
+plotly>=5.18.0  # For interactive charts
+
+# Optional real-time media (future mic selection/waveform)
+streamlit-webrtc>=0.47.1
+
+# Optional: Whisper for better STT
+# openai-whisper>=20230918
+
+# Testing and development
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Visualization
+plotly>=5.18.0
+
+# Reporting
+fpdf>=1.7.2
+
+# Utilities
+watchdog>=3.0.0

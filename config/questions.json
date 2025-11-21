@@ -1,0 +1,741 @@
+{
+  "HR": {
+    "Beginner": [
+      {
+        "question": "Tell me about yourself and your background.",
+        "keywords": [
+          "background",
+          "experience",
+          "education",
+          "skills",
+          "interests"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["vague", "too_short"]
+      },
+      {
+        "question": "Why are you interested in this position?",
+        "keywords": ["motivation", "interest", "company", "role", "career"],
+        "expected_duration": 60,
+        "follow_up_triggers": ["generic"]
+      },
+      {
+        "question": "What are your greatest strengths?",
+        "keywords": ["strength", "skill", "ability", "expertise", "advantage"],
+        "expected_duration": 60,
+        "follow_up_triggers": ["no_example"]
+      },
+      {
+        "question": "What is your biggest weakness and how are you working to improve it?",
+        "keywords": [
+          "weakness",
+          "improve",
+          "development",
+          "challenge",
+          "learning"
+        ],
+        "expected_duration": 60,
+        "follow_up_triggers": ["cliche"]
+      },
+      {
+        "question": "Where do you see yourself in 5 years?",
+        "keywords": ["goals", "career", "growth", "aspiration", "future"],
+        "expected_duration": 60,
+        "follow_up_triggers": ["unrealistic"]
+      },
+      {
+        "question": "Why do you want to work for our company?",
+        "keywords": ["company", "culture", "mission", "values", "research"],
+        "expected_duration": 60,
+        "follow_up_triggers": ["generic"]
+      },
+      {
+        "question": "What motivates you to do your best work?",
+        "keywords": [
+          "motivation",
+          "drive",
+          "passion",
+          "inspiration",
+          "purpose"
+        ],
+        "expected_duration": 60,
+        "follow_up_triggers": ["vague"]
+      },
+      {
+        "question": "Describe your ideal work environment.",
+        "keywords": [
+          "environment",
+          "culture",
+          "team",
+          "workplace",
+          "preference"
+        ],
+        "expected_duration": 60,
+        "follow_up_triggers": ["unrealistic"]
+      },
+      {
+        "question": "How do you handle stress and pressure?",
+        "keywords": [
+          "stress",
+          "pressure",
+          "coping",
+          "management",
+          "resilience"
+        ],
+        "expected_duration": 60,
+        "follow_up_triggers": ["no_example"]
+      },
+      {
+        "question": "What are your salary expectations?",
+        "keywords": [
+          "salary",
+          "compensation",
+          "expectations",
+          "range",
+          "negotiation"
+        ],
+        "expected_duration": 45,
+        "follow_up_triggers": ["unprepared"]
+      }
+    ],
+    "Intermediate": [
+      {
+        "question": "Describe a time when you had to handle a difficult situation with a team member. How did you resolve it?",
+        "keywords": [
+          "conflict",
+          "teamwork",
+          "resolution",
+          "communication",
+          "collaboration"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_outcome"]
+      },
+      {
+        "question": "Tell me about a project where you had to meet a tight deadline. How did you manage your time?",
+        "keywords": [
+          "deadline",
+          "time management",
+          "priority",
+          "planning",
+          "pressure"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["vague"]
+      },
+      {
+        "question": "Describe a situation where you failed. What did you learn from it?",
+        "keywords": [
+          "failure",
+          "learning",
+          "growth",
+          "reflection",
+          "improvement"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_learning"]
+      },
+      {
+        "question": "How do you handle constructive criticism?",
+        "keywords": [
+          "feedback",
+          "criticism",
+          "improvement",
+          "receptive",
+          "growth"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["defensive"]
+      },
+      {
+        "question": "Give an example of when you demonstrated leadership skills.",
+        "keywords": [
+          "leadership",
+          "initiative",
+          "guidance",
+          "influence",
+          "responsibility"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_example"]
+      }
+    ],
+    "Advanced": [
+      {
+        "question": "Describe a complex organizational change you led or were part of. What was your role and what was the outcome?",
+        "keywords": [
+          "change management",
+          "leadership",
+          "strategy",
+          "impact",
+          "stakeholder"
+        ],
+        "expected_duration": 180,
+        "follow_up_triggers": ["surface_level"]
+      },
+      {
+        "question": "Tell me about a time when you had to make a difficult decision with incomplete information. How did you approach it?",
+        "keywords": [
+          "decision making",
+          "risk",
+          "analysis",
+          "judgment",
+          "uncertainty"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["no_framework"]
+      },
+      {
+        "question": "Describe a situation where you had to influence stakeholders who initially disagreed with your approach.",
+        "keywords": [
+          "influence",
+          "persuasion",
+          "stakeholder",
+          "negotiation",
+          "communication"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["no_strategy"]
+      },
+      {
+        "question": "How do you balance innovation with maintaining operational excellence in your work?",
+        "keywords": [
+          "innovation",
+          "efficiency",
+          "balance",
+          "improvement",
+          "risk"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["theoretical"]
+      },
+      {
+        "question": "Describe your approach to building and developing high-performing teams.",
+        "keywords": [
+          "team building",
+          "development",
+          "culture",
+          "performance",
+          "motivation"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["generic"]
+      }
+    ]
+  },
+  "Technical": {
+    "Beginner": [
+      {
+        "question": "What is the difference between a list and a tuple in Python?",
+        "keywords": [
+          "mutable",
+          "immutable",
+          "list",
+          "tuple",
+          "difference",
+          "data structure"
+        ],
+        "expected_duration": 60,
+        "follow_up_triggers": ["incomplete"],
+        "technical_concepts": ["mutability", "data_structures", "python_basics"]
+      },
+      {
+        "question": "Explain what a primary key is in a database.",
+        "keywords": [
+          "primary key",
+          "unique",
+          "identifier",
+          "database",
+          "constraint"
+        ],
+        "expected_duration": 60,
+        "follow_up_triggers": ["too_short"],
+        "technical_concepts": ["database", "sql", "constraints"]
+      },
+      {
+        "question": "What is the difference between GET and POST HTTP methods?",
+        "keywords": ["GET", "POST", "HTTP", "request", "data", "method"],
+        "expected_duration": 60,
+        "follow_up_triggers": ["incomplete"],
+        "technical_concepts": ["http", "web", "api"]
+      },
+      {
+        "question": "What is a variable in programming? Give an example.",
+        "keywords": ["variable", "store", "data", "memory", "value", "type"],
+        "expected_duration": 60,
+        "follow_up_triggers": ["no_example"],
+        "technical_concepts": ["programming_basics", "variables"]
+      },
+      {
+        "question": "Explain what an API is and why it's useful.",
+        "keywords": [
+          "API",
+          "interface",
+          "communication",
+          "application",
+          "integration"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["too_abstract"],
+        "technical_concepts": ["api", "integration", "software_design"]
+      }
+    ],
+    "Intermediate": [
+      {
+        "question": "Explain the concept of object-oriented programming and its main principles.",
+        "keywords": [
+          "OOP",
+          "encapsulation",
+          "inheritance",
+          "polymorphism",
+          "abstraction",
+          "class",
+          "object"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["missing_principles"],
+        "technical_concepts": ["oop", "design_patterns", "software_engineering"]
+      },
+      {
+        "question": "What is the difference between SQL and NoSQL databases? When would you use each?",
+        "keywords": [
+          "SQL",
+          "NoSQL",
+          "relational",
+          "document",
+          "scalability",
+          "ACID"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_use_case"],
+        "technical_concepts": ["databases", "sql", "nosql", "architecture"]
+      },
+      {
+        "question": "Explain what a RESTful API is and its key constraints.",
+        "keywords": [
+          "REST",
+          "API",
+          "stateless",
+          "resource",
+          "HTTP",
+          "constraint"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["incomplete_constraints"],
+        "technical_concepts": ["rest", "api", "web_services"]
+      },
+      {
+        "question": "What is the difference between supervised and unsupervised learning in machine learning?",
+        "keywords": [
+          "supervised",
+          "unsupervised",
+          "learning",
+          "labels",
+          "clustering",
+          "classification"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["no_examples"],
+        "technical_concepts": ["machine_learning", "ai", "algorithms"]
+      },
+      {
+        "question": "Explain the concept of Big O notation and why it's important.",
+        "keywords": [
+          "Big O",
+          "complexity",
+          "algorithm",
+          "efficiency",
+          "time",
+          "space"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_examples"],
+        "technical_concepts": ["algorithms", "complexity", "optimization"]
+      }
+    ],
+    "Advanced": [
+      {
+        "question": "Design a scalable system for processing millions of events per second. What architecture would you propose?",
+        "keywords": [
+          "scalability",
+          "architecture",
+          "distributed",
+          "queue",
+          "microservices",
+          "event",
+          "stream"
+        ],
+        "expected_duration": 180,
+        "follow_up_triggers": ["no_specifics"],
+        "technical_concepts": [
+          "system_design",
+          "scalability",
+          "distributed_systems"
+        ]
+      },
+      {
+        "question": "Explain how you would implement a recommendation system for an e-commerce platform. What algorithms and approaches would you consider?",
+        "keywords": [
+          "recommendation",
+          "collaborative",
+          "content-based",
+          "matrix factorization",
+          "algorithm",
+          "personalization"
+        ],
+        "expected_duration": 180,
+        "follow_up_triggers": ["surface_level"],
+        "technical_concepts": [
+          "machine_learning",
+          "recommendation_systems",
+          "algorithms"
+        ]
+      },
+      {
+        "question": "Describe the CAP theorem and its implications for distributed database design.",
+        "keywords": [
+          "CAP",
+          "consistency",
+          "availability",
+          "partition tolerance",
+          "distributed",
+          "trade-off"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["no_examples"],
+        "technical_concepts": ["distributed_systems", "databases", "theory"]
+      },
+      {
+        "question": "How would you optimize a machine learning model that's overfitting? Explain multiple techniques.",
+        "keywords": [
+          "overfitting",
+          "regularization",
+          "dropout",
+          "cross-validation",
+          "pruning",
+          "data augmentation"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["insufficient_techniques"],
+        "technical_concepts": [
+          "machine_learning",
+          "optimization",
+          "model_tuning"
+        ]
+      },
+      {
+        "question": "Explain the architecture of a deep learning transformer model and its advantages over RNNs.",
+        "keywords": [
+          "transformer",
+          "attention",
+          "self-attention",
+          "RNN",
+          "LSTM",
+          "parallel",
+          "architecture"
+        ],
+        "expected_duration": 180,
+        "follow_up_triggers": ["incomplete_explanation"],
+        "technical_concepts": ["deep_learning", "nlp", "transformers"]
+      }
+    ]
+  },
+  "Behavioral": {
+    "Beginner": [
+      {
+        "question": "Tell me about a time when you had to work with someone difficult.",
+        "keywords": [
+          "conflict",
+          "teamwork",
+          "communication",
+          "resolution",
+          "difficult"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["no_outcome"]
+      },
+      {
+        "question": "Describe a situation where you had to learn something new quickly.",
+        "keywords": [
+          "learning",
+          "adaptability",
+          "quick",
+          "new skill",
+          "challenge"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["vague"]
+      },
+      {
+        "question": "Give an example of when you went above and beyond your job responsibilities.",
+        "keywords": [
+          "initiative",
+          "extra effort",
+          "dedication",
+          "responsibility",
+          "achievement"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["generic"]
+      },
+      {
+        "question": "Tell me about a time when you received criticism. How did you handle it?",
+        "keywords": [
+          "criticism",
+          "feedback",
+          "growth",
+          "receptive",
+          "improvement"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["defensive"]
+      },
+      {
+        "question": "Describe a situation where you had to prioritize multiple tasks.",
+        "keywords": [
+          "prioritization",
+          "time management",
+          "organization",
+          "deadline",
+          "multitasking"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["no_strategy"]
+      }
+    ],
+    "Intermediate": [
+      {
+        "question": "Tell me about a time when you had to convince others to see your perspective.",
+        "keywords": [
+          "persuasion",
+          "influence",
+          "communication",
+          "stakeholder",
+          "negotiation"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_outcome"]
+      },
+      {
+        "question": "Describe a project where things didn't go as planned. How did you adapt?",
+        "keywords": [
+          "adaptability",
+          "problem-solving",
+          "resilience",
+          "change",
+          "recovery"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["blame_others"]
+      },
+      {
+        "question": "Give an example of when you had to make a difficult decision with limited information.",
+        "keywords": [
+          "decision-making",
+          "uncertainty",
+          "judgment",
+          "risk",
+          "analysis"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_reasoning"]
+      },
+      {
+        "question": "Tell me about a time when you identified and solved a problem proactively.",
+        "keywords": [
+          "proactive",
+          "initiative",
+          "problem-solving",
+          "anticipation",
+          "prevention"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["generic"]
+      },
+      {
+        "question": "Describe a situation where you had to manage competing stakeholder interests.",
+        "keywords": [
+          "stakeholder",
+          "conflict",
+          "balance",
+          "negotiation",
+          "diplomacy"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_specifics"]
+      }
+    ],
+    "Advanced": [
+      {
+        "question": "Tell me about a time when you led a team through significant change or transformation.",
+        "keywords": [
+          "change management",
+          "leadership",
+          "transformation",
+          "vision",
+          "execution"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["no_strategy"]
+      },
+      {
+        "question": "Describe a situation where you had to balance short-term pressures with long-term goals.",
+        "keywords": [
+          "strategic thinking",
+          "balance",
+          "priorities",
+          "long-term",
+          "trade-off"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["no_reasoning"]
+      },
+      {
+        "question": "Give an example of when you had to influence without authority.",
+        "keywords": [
+          "influence",
+          "leadership",
+          "persuasion",
+          "collaboration",
+          "credibility"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["generic"]
+      },
+      {
+        "question": "Tell me about a time when you had to make an unpopular decision. How did you handle it?",
+        "keywords": [
+          "difficult decision",
+          "courage",
+          "communication",
+          "leadership",
+          "conviction"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["avoided_conflict"]
+      },
+      {
+        "question": "Describe how you've built and maintained relationships with key stakeholders across an organization.",
+        "keywords": [
+          "relationship building",
+          "stakeholder management",
+          "networking",
+          "influence",
+          "collaboration"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["surface_level"]
+      }
+    ]
+  },
+  "Mixed": {
+    "Beginner": [
+      {
+        "question": "Tell me about yourself and your technical background.",
+        "keywords": [
+          "background",
+          "experience",
+          "technical",
+          "skills",
+          "projects"
+        ],
+        "expected_duration": 90,
+        "follow_up_triggers": ["vague"]
+      },
+      {
+        "question": "What interests you about this role and our company?",
+        "keywords": ["interest", "motivation", "company", "role", "research"],
+        "expected_duration": 60,
+        "follow_up_triggers": ["generic"]
+      },
+      {
+        "question": "Describe a technical challenge you faced and how you solved it.",
+        "keywords": [
+          "challenge",
+          "problem-solving",
+          "technical",
+          "solution",
+          "approach"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_details"]
+      }
+    ],
+    "Intermediate": [
+      {
+        "question": "Tell me about a time when you had to balance technical excellence with business needs.",
+        "keywords": [
+          "balance",
+          "technical",
+          "business",
+          "trade-off",
+          "priority"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["no_reasoning"]
+      },
+      {
+        "question": "Describe how you approach collaborating with non-technical team members.",
+        "keywords": [
+          "collaboration",
+          "communication",
+          "non-technical",
+          "teamwork",
+          "explain"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["surface_level"]
+      },
+      {
+        "question": "Give an example of when you had to learn a new technology or framework under pressure.",
+        "keywords": [
+          "learning",
+          "technology",
+          "pressure",
+          "adaptability",
+          "deadline"
+        ],
+        "expected_duration": 120,
+        "follow_up_triggers": ["vague"]
+      }
+    ],
+    "Advanced": [
+      {
+        "question": "Describe your experience leading technical teams while managing stakeholder expectations.",
+        "keywords": [
+          "leadership",
+          "technical",
+          "stakeholder",
+          "management",
+          "balance"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["generic"]
+      },
+      {
+        "question": "Tell me about a time when you had to make a critical technical decision that impacted the business.",
+        "keywords": [
+          "decision",
+          "technical",
+          "business impact",
+          "critical",
+          "analysis"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["no_specifics"]
+      },
+      {
+        "question": "How do you foster innovation while maintaining system reliability and stability?",
+        "keywords": [
+          "innovation",
+          "reliability",
+          "stability",
+          "balance",
+          "risk management"
+        ],
+        "expected_duration": 150,
+        "follow_up_triggers": ["theoretical"]
+      }
+    ]
+  }
+}

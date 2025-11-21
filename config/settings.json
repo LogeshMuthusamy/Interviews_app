@@ -1,0 +1,133 @@
+{
+  "application": {
+    "name": "AI Virtual Interview Coach",
+    "version": "1.0.0",
+    "description": "Advanced AI-powered interview practice application"
+  },
+
+  "speech_recognition": {
+    "engine": "google",
+    "language": "en-US",
+    "energy_threshold": 300,
+    "pause_threshold": 0.8,
+    "phrase_threshold": 0.3,
+    "dynamic_energy": true
+  },
+
+  "text_to_speech": {
+    "engine": "gtts",
+    "language": "en",
+    "speed": 150,
+    "voice_type": "female"
+  },
+
+  "nlp_evaluation": {
+    "model": "all-MiniLM-L6-v2",
+    "enable_semantic_similarity": true,
+    "enable_sentiment_analysis": true,
+    "min_answer_length": 10,
+    "max_answer_length": 500
+  },
+
+  "scoring_weights": {
+    "HR": {
+      "technical": 0.1,
+      "communication": 0.35,
+      "sentiment": 0.3,
+      "completeness": 0.25
+    },
+    "Technical": {
+      "technical": 0.4,
+      "communication": 0.25,
+      "sentiment": 0.15,
+      "completeness": 0.2
+    },
+    "Mixed": {
+      "technical": 0.3,
+      "communication": 0.3,
+      "sentiment": 0.2,
+      "completeness": 0.2
+    }
+  },
+
+  "interview_settings": {
+    "min_questions": 3,
+    "max_questions": 10,
+    "default_questions": 5,
+    "enable_follow_up": true,
+    "follow_up_threshold": 50
+  },
+
+  "speech_metrics": {
+    "ideal_wpm": 140,
+    "min_wpm": 100,
+    "max_wpm": 180,
+    "filler_words": [
+      "um",
+      "uh",
+      "like",
+      "you know",
+      "actually",
+      "basically",
+      "literally",
+      "so",
+      "well",
+      "right",
+      "okay",
+      "yeah",
+      "hmm",
+      "er"
+    ],
+    "professional_words": [
+      "therefore",
+      "however",
+      "consequently",
+      "furthermore",
+      "additionally",
+      "specifically",
+      "particularly",
+      "essentially"
+    ]
+  },
+
+  "grading_scale": {
+    "A": { "min": 90, "max": 100, "description": "Excellent" },
+    "B": { "min": 80, "max": 89, "description": "Very Good" },
+    "C": { "min": 70, "max": 79, "description": "Good" },
+    "D": { "min": 60, "max": 69, "description": "Satisfactory" },
+    "F": { "min": 0, "max": 59, "description": "Needs Improvement" }
+  },
+
+  "database": {
+    "type": "json",
+    "path": "data/interview_sessions.json",
+    "auto_backup": true,
+    "max_sessions": 1000
+  },
+
+  "reports": {
+    "output_directory": "reports",
+    "formats": ["pdf", "txt", "json"],
+    "include_transcript": true,
+    "include_charts": true,
+    "include_recommendations": true
+  },
+
+  "ui_settings": {
+    "theme": "light",
+    "primary_color": "#6C63FF",
+    "secondary_color": "#4CAF50",
+    "show_progress_bar": true,
+    "show_realtime_metrics": true,
+    "show_video_preview": true,
+    "animation_enabled": true
+  },
+
+  "advanced_features": {
+    "enable_video_analysis": false,
+    "enable_facial_recognition": false,
+    "enable_voice_emotion": false,
+    "enable_custom_questions": true,
+    "enable_multi_language": false
+  }
+}
