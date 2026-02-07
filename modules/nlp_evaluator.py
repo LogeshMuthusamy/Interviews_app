@@ -27,15 +27,36 @@ except ImportError:
     TEXTBLOB_AVAILABLE = False
     logger.warning("TextBlob not available. Using basic sentiment analysis.")
 
+# Optional: Google Gemini
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
 
 class NLPEvaluator:
     """Advanced NLP-based answer evaluation system"""
     
-    def __init__(self):
-        """Initialize NLP models"""
+    def __init__(self, api_key: str = None):
+        """Initialize NLP models
+        Args:
+            api_key: Optional Google Gemini API Key for LLM-based evaluation
+        """
         self.model = None
+        self.api_key = api_key
+        self.use_llm = bool(api_key and GEMINI_AVAILABLE)
         
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
+        if self.use_llm:
+            try:
+                genai.configure(api_key=self.api_key)
+                self.llm_model = genai.GenerativeModel('gemini-pro')
+                logger.info("Configured Google Gemini LLM")
+            except Exception as e:
+                logger.error(f"Failed to configure Gemini: {e}")
+                self.use_llm = False
+        
+        if not self.use_llm and SENTENCE_TRANSFORMERS_AVAILABLE:
             try:
                 # Load a lightweight but effective model
                 self.model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -61,6 +82,15 @@ class NLPEvaluator:
         Returns:
             Dictionary with detailed scores and feedback
         """
+        # --- LLM PATH ---
+        if self.use_llm:
+            try:
+                return self._evaluate_with_gemini(user_answer, question, interview_mode, difficulty)
+            except Exception as e:
+                logger.error(f"Gemini evaluation failed, falling back to local: {e}")
+                # Fallthrough to local
+        
+        # --- LOCAL PATH ---
         
         # 1. Technical Accuracy Score (if applicable)
         technical_score = self._evaluate_technical_accuracy(
@@ -110,7 +140,48 @@ class NLPEvaluator:
             'grade': self._get_grade(overall_score),
             'pass': overall_score >= 60
         }
-    
+
+    def _evaluate_with_gemini(self, user_answer: str, question: Dict, mode: str, difficulty: str) -> Dict:
+        """Use Google Gemini to evaluate the answer"""
+        import json
+        
+        prompt = f"""
+        Act as an expert {mode} interviewer. Evaluate the candidate's answer for a {difficulty} level position.
+        
+        Question: "{question.get('question')}"
+        Expected Keywords/Context: {', '.join(question.get('keywords', []))}
+        Ideal Answer (Reference): "{question.get('ideal_answer', 'Not provided')}"
+        
+        Candidate's Answer: "{user_answer}"
+        
+        Provide a strictly valid JSON response with the following structure:
+        {{
+            "technical_accuracy": <0-100 score>,
+            "communication_skills": <0-100 score>,
+            "sentiment_tone": <0-100 score>,
+            "completeness": <0-100 score>,
+            "overall_score": <0-100 weighted average>,
+            "feedback": {{
+                "strengths": ["point 1", "point 2"],
+                "weaknesses": ["point 1", "point 2"],
+                "suggestions": ["specific improvement tip 1", "tip 2"]
+            }}
+        }}
+        Do not include markdown formatting like ```json ... ```. Just the raw JSON string.
+        """
+        
+        try:
+            response = self.llm_model.generate_content(prompt)
+            data = json.loads(response.text.strip().replace('```json', '').replace('```', ''))
+            
+            # Ensure proper structure
+            data['grade'] = self._get_grade(data['overall_score'])
+            data['pass'] = data['overall_score'] >= 60
+            return data
+        except Exception as e:
+            logger.error(f"Gemini parsing error: {e}")
+            raise e  # Trigger fallback
+
     def _evaluate_technical_accuracy(self, answer: str, question: Dict, 
                                     mode: str) -> float:
         """
@@ -511,7 +582,7 @@ class NLPEvaluator:
 
 # Convenience function
 def evaluate_answer(user_answer: str, question: Dict, 
-                   interview_mode: str, difficulty: str) -> Dict:
+                   interview_mode: str, difficulty: str, api_key: str = None) -> Dict:
     """
     Evaluate an interview answer
     
@@ -520,9 +591,10 @@ def evaluate_answer(user_answer: str, question: Dict,
         question: Question dictionary
         interview_mode: Interview type
         difficulty: Difficulty level
+        api_key: Optional Gemini API Key
         
     Returns:
         Evaluation results dictionary
     """
-    evaluator = NLPEvaluator()
+    evaluator = NLPEvaluator(api_key=api_key)
     return evaluator.evaluate_answer(user_answer, question, interview_mode, difficulty)

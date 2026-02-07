@@ -269,7 +269,8 @@ def initialize_session_state():
         'setup_num_questions': 5,
         'question_start_time': None,
         'current_evaluation': None,
-        'stt_metrics': {}
+        'stt_metrics': {},
+        'gemini_api_key': 'AIzaSyAbT8ORcdCd5qqlMPS-p7R2yFaOf2cdbzo' 
     }
     
     # Initialize session state with defaults
@@ -317,75 +318,142 @@ if not st.session_state.get('logged_in', False):
             <p>AI-Powered Interview Practice Platform</p>
         </div>
         """, unsafe_allow_html=True)
+
+        # Custom CSS for the role selector
+        st.markdown("""
+        <style>
+        div[role="radiogroup"] {
+            justify-content: center;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # Role Selection
+        st.markdown('<p style="text-align:center;font-weight:600;margin-bottom:0.5rem;color:#4B5563;">Please select your role:</p>', unsafe_allow_html=True)
+        role_options = ["Student / Candidate", "Interviewer / HR"]
+        selected_role_label = st.radio("Role", role_options, horizontal=True, label_visibility="collapsed", index=0)
         
-        # Tabs for Sign in and Sign up
-        tab_login, tab_register = st.tabs(["Sign in", "Sign up"])
-        
-        with tab_login:
-            st.markdown('<p style="text-align:center;color:#334155;font-size:0.9375rem;margin-bottom:1.5rem;">to continue to Interviews Chat</p>', unsafe_allow_html=True)
+        # Tabs based on Role
+        if role_options.index(selected_role_label) == 0: # Student
+            st.markdown("---")
+            tab_join, tab_login, tab_register = st.tabs(["🔑 Join Meeting", "👤 Sign in", "📝 Sign up"])
             
-            with st.form("login_form", clear_on_submit=False):
-                username = st.text_input("Username or Email", placeholder="Enter your username or email", label_visibility="visible")
-                password = st.text_input("Password", type="password", placeholder="Enter your password", label_visibility="visible")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                submit = st.form_submit_button("CONTINUE", type="primary", use_container_width=True)
-                
-                if submit:
-                    if username and password:
-                        try:
+            with tab_join:
+                st.info("Enter the Meeting ID provided by your interviewer to join a session directly.")
+                with st.form("join_meeting_form"):
+                    display_name = st.text_input("Your Name", placeholder="Enter your full name")
+                    meeting_id = st.text_input("Meeting ID", placeholder="Enter Meeting ID given by Interviewer")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.form_submit_button("JOIN SESSION", type="primary", use_container_width=True):
+                        if display_name and meeting_id:
                             db = get_database()
-                            success, result = db.authenticate_user(username, password)
-                            if success:
+                            if db.verify_meeting(meeting_id):
                                 st.session_state.logged_in = True
-                                st.session_state.current_user = result
-                                st.session_state.user_name = result.get('full_name', username)
-                                st.success("✅ Sign in successful!")
+                                st.session_state.current_user = {"username": display_name, "full_name": display_name, "role": "student", "is_guest": True}
+                                st.session_state.user_name = display_name
+                                st.session_state.meeting_id = meeting_id
+                                st.session_state.interview_mode_override = "Meeting"
+                                st.success("✅ Joining session...")
                                 time.sleep(0.5)
                                 st.rerun()
                             else:
-                                st.error(f"❌ {result}")
-                        except Exception as e:
-                            logger.error(f"Login error: {str(e)}")
-                            st.error("❌ Sign in failed. Please check your credentials.")
-                    else:
-                        st.warning("⚠️ Please enter your username and password")
-            
-            st.markdown('<div class="auth-footer">No account? Switch to <strong>Sign up</strong> tab</div>', unsafe_allow_html=True)
-        
-        with tab_register:
-            st.markdown('<p style="text-align:center;color:#334155;font-size:0.9375rem;margin-bottom:1.5rem;">Create your account</p>', unsafe_allow_html=True)
-            
-            with st.form("register_form", clear_on_submit=True):
-                full_name = st.text_input("Full Name", placeholder="Enter your full name", label_visibility="visible")
-                new_user = st.text_input("Username", placeholder="Choose a username", label_visibility="visible")
-                new_pass = st.text_input("Password", type="password", placeholder="Create a password (min. 6 characters)", label_visibility="visible")
-                confirm_pass = st.text_input("Confirm Password", type="password", placeholder="Confirm your password", label_visibility="visible")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                submit_reg = st.form_submit_button("CREATE ACCOUNT", type="primary", use_container_width=True)
-                
-                if submit_reg:
-                    if new_user and new_pass and full_name:
-                        if new_pass != confirm_pass:
-                            st.error("❌ Passwords do not match!")
-                        elif len(new_pass) < 6:
-                            st.error("❌ Password must be at least 6 characters long")
+                                st.error("❌ Invalid or inactive Meeting ID")
                         else:
-                            try:
+                            st.warning("⚠️ Please fill in all fields")
+            
+            with tab_login:
+                st.markdown('<p style="text-align:center;color:#334155;font-size:0.9rem;margin-bottom:1rem;">Login for Personal Practice</p>', unsafe_allow_html=True)
+                with st.form("student_login_form"):
+                    username = st.text_input("Username", placeholder="Username")
+                    password = st.text_input("Password", type="password", placeholder="Password")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.form_submit_button("CONTINUE", type="primary", use_container_width=True):
+                        db = get_database()
+                        success, result = db.authenticate_user(username, password)
+                        if success:
+                            # Verify role if possible, but for now allow access
+                            st.session_state.logged_in = True
+                            st.session_state.current_user = result
+                            st.session_state.user_name = result.get('full_name', username)
+                            if 'api_key' in result:
+                                st.session_state.gemini_api_key = result['api_key']
+                            st.success("✅ Sign in successful!")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {result}")
+
+            with tab_register:
+                st.markdown('<p style="text-align:center;color:#334155;font-size:0.9rem;margin-bottom:1rem;">Create a <strong>Student Account</strong> for self-paced practice.</p>', unsafe_allow_html=True)
+                with st.form("student_register_form"):
+                    full_name = st.text_input("Full Name", placeholder="e.g. John Doe")
+                    email = st.text_input("Email Address", placeholder="e.g. john@example.com")
+                    new_user = st.text_input("Username", placeholder="Choose a username")
+                    new_pass = st.text_input("Password", type="password", help="Minimum 6 characters")
+                    confirm_pass = st.text_input("Confirm Password", type="password")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.form_submit_button("CREATE STUDENT ACCOUNT", type="primary", use_container_width=True):
+                        if new_user and new_pass and full_name:
+                            if new_pass != confirm_pass or len(new_pass) < 6:
+                                st.error("❌ Invalid password or mismatch")
+                            else:
                                 db = get_database()
-                                success, msg = db.register_user(new_user, new_pass, full_name)
+                                success, msg = db.register_user(new_user, new_pass, full_name, role="student", email=email)
                                 if success:
-                                    st.success("✅ Account created successfully! Please sign in.")
+                                    st.success("✅ Account created! Please sign in.")
                                 else:
                                     st.error(f"❌ {msg}")
-                            except Exception as e:
-                                logger.error(f"Registration error: {str(e)}")
-                                st.error("❌ Registration failed. Please try again.")
-                    else:
-                        st.warning("⚠️ Please fill in all fields")
+
+        else: # Interviewer
+            tab_login, tab_register = st.tabs(["Sign in", "Sign up"])
             
-            st.markdown('<div class="auth-footer">Already have an account? Switch to <strong>Sign in</strong> tab</div>', unsafe_allow_html=True)
+            with tab_login:
+                st.markdown('<p style="text-align:center;color:#334155;font-size:0.9rem;margin-bottom:1rem;">Interviewer Access</p>', unsafe_allow_html=True)
+                with st.form("interviewer_login_form"):
+                    username = st.text_input("Username", placeholder="Username")
+                    password = st.text_input("Password", type="password", placeholder="Password")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.form_submit_button("CONTINUE", type="primary", use_container_width=True):
+                        db = get_database()
+                        success, result = db.authenticate_user(username, password)
+                        # Ideally check result['role'] == 'interviewer'
+                        if success:
+                            st.session_state.logged_in = True
+                            st.session_state.current_user = result
+                            st.session_state.user_name = result.get('full_name', username)
+                            if 'api_key' in result:
+                                st.session_state.gemini_api_key = result['api_key']
+                            st.success("✅ Sign in successful!")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {result}")
+
+            with tab_register:
+                st.markdown('<p style="text-align:center;color:#334155;font-size:0.9rem;margin-bottom:1rem;">Create Interviewer Account</p>', unsafe_allow_html=True)
+                with st.form("interviewer_register_form"):
+                    full_name = st.text_input("Full Name")
+                    new_user = st.text_input("Username")
+                    new_pass = st.text_input("Password", type="password")
+                    confirm_pass = st.text_input("Confirm Password", type="password")
+                    secret_code = st.text_input("Admin Code (Optional)", type="password", help="Required for admin privileges if configured")
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.form_submit_button("CREATE ACCOUNT", type="primary", use_container_width=True):
+                        if new_user and new_pass and full_name:
+                            if new_pass != confirm_pass or len(new_pass) < 6:
+                                st.error("❌ Invalid password")
+                            else:
+                                db = get_database()
+                                success, msg = db.register_user(new_user, new_pass, full_name, role="interviewer")
+                                if success:
+                                    st.success("✅ Account created! Please sign in.")
+                                else:
+                                    st.error(f"❌ {msg}")
     
     st.stop()  # Stop execution here if not logged in
 
@@ -393,7 +461,7 @@ if not st.session_state.get('logged_in', False):
 # HELPER: Start interview (reusable for sidebar + hero button)
 # ============================================================================
 
-def start_interview_session(interview_mode: str, difficulty: str, num_questions: int):
+def start_interview_session(interview_mode: str, difficulty: str, num_questions: int, custom_questions: list = None):
     """Start a new interview session with proper validation and error handling"""
     try:
         # Validate inputs
@@ -430,7 +498,9 @@ def start_interview_session(interview_mode: str, difficulty: str, num_questions:
             num_questions, 
             target_keywords=tailored_keywords,
             resume_text=st.session_state.get('resume_text', ''),
-            job_description=st.session_state.get('job_description_text', '')
+            job_description=st.session_state.get('job_description_text', ''),
+            custom_questions_list=custom_questions,
+            api_key=st.session_state.get('gemini_api_key')
         )
         
         # Initialize database session
@@ -450,7 +520,8 @@ def start_interview_session(interview_mode: str, difficulty: str, num_questions:
             interview_mode, 
             difficulty, 
             st.session_state.get('user_name', 'anonymous'),
-            metadata=meta
+            metadata=meta,
+            meeting_id=st.session_state.get('meeting_id')
         )
         
         # Get first question
@@ -473,6 +544,12 @@ def start_interview_session(interview_mode: str, difficulty: str, num_questions:
             'paused': False,
             'error_message': ''
         })
+
+        # DB Sync: Log first question
+        try:
+            db.append_transcript(st.session_state.session_id, 'AI', first_question['question'])
+        except Exception:
+            pass
         
         # Log the start of the interview
         logger.info(f"Interview started - Mode: {interview_mode}, Difficulty: {difficulty}")
@@ -579,50 +656,79 @@ def show_sidebar():
     """Render the sidebar with navigation and session controls"""
     try:
         with st.sidebar:
-            st.image("https://via.placeholder.com/200x60?text=AI+Interview+Coach", width=200)
+            st.markdown("## 🤖 AI Interview Coach")
             
-            # Always show interview settings at the top
-            st.markdown("### ⚙️ Interview Settings")
+            user_info = st.session_state.get('current_user', {})
+            user_role = user_info.get('role', 'student')
             
-            # Interview Mode Selection
-            interview_mode_options = ["Technical", "HR", "Behavioral", "Mixed"]
-            current_mode = st.session_state.get('setup_interview_mode', 'Technical')
-            mode_index = interview_mode_options.index(current_mode) if current_mode in interview_mode_options else 0
-            
-            selected_mode = st.selectbox(
-                "Interview Type",
-                interview_mode_options,
-                index=mode_index,
-                key="sidebar_interview_mode",
-                help="Select the type of interview questions"
-            )
-            st.session_state.setup_interview_mode = selected_mode
-            
-            # Difficulty Level Selection
-            difficulty_options = ["Beginner", "Intermediate", "Advanced"]
-            current_diff = st.session_state.get('setup_difficulty', 'Intermediate')
-            diff_index = difficulty_options.index(current_diff) if current_diff in difficulty_options else 1
-            
-            selected_difficulty = st.selectbox(
-                "Difficulty Level",
-                difficulty_options,
-                index=diff_index,
-                key="sidebar_difficulty",
-                help="Select the difficulty level of questions"
-            )
-            st.session_state.setup_difficulty = selected_difficulty
-            
-            # Number of Questions
-            num_questions = st.slider(
-                "Number of Questions",
-                min_value=3,
-                max_value=15,
-                value=st.session_state.get('setup_num_questions', 5),
-                step=1,
-                key="sidebar_num_questions",
-                help="Total questions in the interview"
-            )
-            st.session_state.setup_num_questions = num_questions
+            if user_role == 'interviewer':
+                st.markdown("### 👨‍💼 Interviewer Dashboard")
+                st.info("You are logged in as an Interviewer.")
+                
+                # Create Meeting Tool
+                with st.expander("Create New Meeting", expanded=True):
+                    if st.button("Generate Meeting ID", type="primary"):
+                        db = get_database()
+                        mid = db.create_meeting(st.session_state.user_name)
+                        st.session_state.created_meeting_id = mid
+                        
+                if st.session_state.get('created_meeting_id'):
+                    st.success("Meeting ID Generated")
+                    st.code(st.session_state.created_meeting_id, language="text")
+                    st.warning("Share this ID with your students.")
+
+            elif st.session_state.get('meeting_id'):
+                st.markdown("### 🎓 Student Session")
+                st.info(f"Connected to Meeting: **{st.session_state.meeting_id}**")
+                
+                # Meeting Logic overrides manual settings
+                st.session_state.setup_interview_mode = "Mixed" # Default for meetings
+                st.session_state.setup_difficulty = "Intermediate"
+                st.session_state.setup_num_questions = 5
+
+            else:
+                # Standard Practice Mode (Existing Sidebar)
+                st.markdown("### ⚙️ Interview Settings")
+                
+                # Interview Mode Selection
+                interview_mode_options = ["Technical", "HR", "Behavioral", "Mixed"]
+                current_mode = st.session_state.get('setup_interview_mode', 'Technical')
+                mode_index = interview_mode_options.index(current_mode) if current_mode in interview_mode_options else 0
+                
+                selected_mode = st.selectbox(
+                    "Interview Type",
+                    interview_mode_options,
+                    index=mode_index,
+                    key="sidebar_interview_mode",
+                    help="Select the type of interview questions"
+                )
+                st.session_state.setup_interview_mode = selected_mode
+                
+                # Difficulty Level Selection
+                difficulty_options = ["Beginner", "Intermediate", "Advanced"]
+                current_diff = st.session_state.get('setup_difficulty', 'Intermediate')
+                diff_index = difficulty_options.index(current_diff) if current_diff in difficulty_options else 1
+                
+                selected_difficulty = st.selectbox(
+                    "Difficulty Level",
+                    difficulty_options,
+                    index=diff_index,
+                    key="sidebar_difficulty",
+                    help="Select the difficulty level of questions"
+                )
+                st.session_state.setup_difficulty = selected_difficulty
+                
+                # Number of Questions
+                num_questions = st.slider(
+                    "Number of Questions",
+                    min_value=3,
+                    max_value=15,
+                    value=st.session_state.get('setup_num_questions', 5),
+                    step=1,
+                    key="sidebar_num_questions",
+                    help="Total questions in the interview"
+                )
+                st.session_state.setup_num_questions = num_questions
             
             st.markdown("---")
             
@@ -686,28 +792,6 @@ def show_sidebar():
 if st.session_state.get('logged_in', False):
     # Call sidebar to make it visible
     show_sidebar()
-    
-    st.markdown("""
-    <div class="main-header">
-        <h1>🤖 AI Virtual Interview Coach</h1>
-        <p>Practice. Perfect. Succeed.</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Inject custom navigation
-    st.markdown("""
-    <div class="custom-nav" style="display:block;">
-        <div class="nav-logo">⚡ Interview Sidekick</div>
-        <div class="nav-group">
-            <div class="nav-item active">🕒 Realtime Assist</div>
-            <div class="nav-item">📘 Interview Prep</div>
-            <div class="nav-item">🔍 Question Bank</div>
-            <div class="nav-item">📚 Context Library</div>
-            <div class="nav-item">💬 Submit Feedback</div>
-        </div>
-        <div class="nav-footer">v0.1 experimental UI</div>
-    </div>
-    """, unsafe_allow_html=True)
 
 # ============================================================================
 # MAIN CONTENT AREA WITH TABS
@@ -716,7 +800,280 @@ if st.session_state.get('logged_in', False):
 tab_interview, tab_history, tab_settings, tab_about = st.tabs(["🗣️ Interview", "📚 History", "⚙️ Settings", "ℹ️ About"])
 
 with tab_interview:
-    if not st.session_state.interview_started and not st.session_state.wizard_active:
+    user_role = st.session_state.get('current_user', {}).get('role', 'student')
+
+    if user_role == 'interviewer':
+        st.header(f"👋 Hello, {st.session_state.get('user_name', 'Interviewer')}")
+        
+        # 1. Meeting Management
+        with st.expander("Create New Meeting", expanded=True):
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                meeting_type = st.selectbox("Meeting Mode", ["AI Assessment (Async)", "Live 1-on-1 (Real-time)"])
+                st.markdown("**Optional: Set Required Technical Questions**")
+                use_custom_q = st.checkbox("Define Custom Questions")
+                
+                custom_questions = []
+                if use_custom_q:
+                    num_custom = st.number_input("How many questions?", 1, 10, 3)
+                    for i in range(num_custom):
+                        q_text = st.text_input(f"Question {i+1}", key=f"cq_{i}")
+                        a_text = st.text_input(f"Expected Answer / Keywords for Q{i+1}", key=f"ca_{i}")
+                        if q_text:
+                            custom_questions.append({'question': q_text, 'expected_answer': a_text, 'custom_generated': True})
+
+            with col_m2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Generate Meeting ID", type="primary"):
+                    mode_code = "live" if "Live" in meeting_type else "async"
+                    db = get_database()
+                    mid = db.create_meeting(st.session_state.user_name, meeting_type=mode_code, custom_questions=custom_questions)
+                    st.session_state.created_meeting_id = mid
+                
+        if st.session_state.get('created_meeting_id'):
+            st.success("Meeting Created Successfully")
+            col_mid, col_copy = st.columns([3, 1])
+            with col_mid:
+                st.code(st.session_state.created_meeting_id, language="text")
+            
+            if st.session_state.get('custom_q_count', 0) > 0:
+                st.info(f"Meeting configured with {st.session_state.custom_q_count} custom questions.")
+            st.warning("Share this ID with the candidate.")
+
+        # 2. View Results / Live Dashboard
+        col_r1, col_r2 = st.columns([3, 1])
+        with col_r1:
+            st.markdown("### 📊 Student Submissions")
+        with col_r2:
+            # Refresh button to avoid Browser Refresh (F5) which logs out user
+            if st.button("🔄 Refresh Data", use_container_width=True):
+                st.rerun()
+
+        db = get_database()
+        
+        # Reload meetings to ensure we see newly created ones or updates
+        if not db.use_mongo:
+             db._load_meetings()
+        
+        # Use user_name (which was used to create the meeting) to query
+        creator_name = st.session_state.get('user_name')
+        my_meetings = db.get_meetings_by_creator(creator_name)
+        
+        if my_meetings:
+            # Sort meeting IDs (Newest first if possible, but IDs are random)
+            meeting_ids = list(my_meetings.keys())
+            
+            # Auto-select the just-created meeting if applicable
+            default_index = 0
+            if st.session_state.get('created_meeting_id') in meeting_ids:
+                default_index = meeting_ids.index(st.session_state.created_meeting_id)
+
+            # Allow monitoring "All" or a specific meeting
+            selected_meeting_id = st.selectbox("Select Meeting to View", meeting_ids, index=default_index, key="meeting_selector")
+            
+            if selected_meeting_id:
+                # Add Delete Option
+                with st.expander("⚠️ Manage Meeting", expanded=False):
+                    st.warning(f"Deleting meeting **{selected_meeting_id}** will prevent students from joining it.")
+                    if st.button("🗑️ Delete This Meeting", type="secondary", key=f"del_{selected_meeting_id}"):
+                        if db.delete_meeting(selected_meeting_id):
+                            st.success(f"Meeting {selected_meeting_id} deleted.")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("Failed to delete meeting.")
+                
+                sessions = db.get_sessions_by_meeting(selected_meeting_id)
+                    
+                if sessions:
+                    st.write(f"Found {len(sessions)} student sessions.")
+                    
+                    # Display as a table of students
+                    for session in sessions:
+                            student_name = session.get('user_name', 'Unknown')
+                            score = session.get('overall_score', 0)
+                            status = session.get('status', 'active')
+                            date = session.get('start_time', '')[:16].replace('T', ' ')
+                            
+                            with st.expander(f"👤 {student_name} | {date} | Score: {score:.1f} | Status: {status}"):
+                                # Logic for Live View if active
+                                if status == 'active' and st.button("🔴 Join Live Monitor", key=f"join_live_{session.get('session_id')}"):
+                                    # Zoom-style Layout: Large Student View, Small Interviewer View (Side)
+                                    st.markdown("### 🔴 Live Session Monitor")
+                                    
+                                    # Using a 3:1 ratio to simulate "Speaker View"
+                                    col_main, col_side = st.columns([3, 1])
+                                    
+                                    with col_main:
+                                        st.markdown(f"**👤 {student_name} (Candidate)**")
+                                        # Main stage - Candidate Feed
+                                        st.markdown("""
+                                        <div style="width:100%; height:400px; background-color:#f1f5f9; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; border: 2px dashed #cbd5e1; color:#64748b;">
+                                            <div style="font-size:4rem; margin-bottom:1rem;">👤</div>
+                                            <div style="font-weight:600; font-size:1.1rem; color:#475569;">Candidate Video Feed</div>
+                                            <div style="font-size:0.9rem; margin-top:0.5rem;">(Simulation Mode)</div>
+                                            <div style="font-size:0.75rem; color:#94a3b8; max-width:80%; text-align:center; margin-top:1rem;">
+                                                Real-time video streaming requires a dedicated signaling server.<br>
+                                                This view confirms the candidate is connected to the session.
+                                            </div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                    with col_side:
+                                        st.markdown("**You (Interviewer)**")
+                                        # Small corner view - Actual Camera
+                                        st.camera_input("Your Camera", key=f"interviewer_cam_{session.get('session_id')}", label_visibility="collapsed")
+                                        st.success("Audio connected 📞")
+                                
+                                # Start Tabs for details
+                                tab_analysis, tab_transcript, tab_details = st.tabs(["📝 Q&A Analysis", "💬 Full Transcript Log", "ℹ️ Student Details"])
+                                
+                                with tab_analysis:
+                                    if not session.get('questions'):
+                                        st.warning("No questions answered yet.")
+                                    else:
+                                        for idx, q in enumerate(session.get('questions', [])):
+                                            st.markdown(f"#### Question {idx+1}")
+                                            st.markdown(f"**Q:** {q.get('question')}")
+                                            if q.get('ideal_answer'):
+                                                st.info(f"**Expected Answer:** {q.get('ideal_answer')}")
+                                            st.markdown(f"**A:** {q.get('answer')}")
+                                            
+                                            # Evaluation Box
+                                            eval_data = q.get('evaluation', {})
+                                            if eval_data:
+                                                st.info(f"**AI Evaluation:**\n\n"
+                                                       f"**Score:** {eval_data.get('overall_score', 0)}/100\n\n"
+                                                       f"**Strengths:** {', '.join(eval_data.get('feedback', {}).get('strengths', ['None']))}\n\n"
+                                                       f"**Improvements:** {', '.join(eval_data.get('feedback', {}).get('weaknesses', ['None']))}")
+                                            st.markdown("---")
+
+                                with tab_transcript:
+                                    st.markdown("##### Raw Conversation Log")
+                                    # Use the transcript list from the session object
+                                    transcript_log = session.get('transcript', [])
+                                    if transcript_log:
+                                        for entry in transcript_log:
+                                            speaker = entry.get('speaker', 'Unknown')
+                                            text = entry.get('text', '')
+                                            timestamp = entry.get('timestamp', '')[11:19] # Extract time
+                                            
+                                            align = "left" if speaker == "AI" else "right"
+                                            color = "#F3F4F6" if speaker == "AI" else "#E0E7FF"
+                                            icon = "🤖" if speaker == "AI" else "👤"
+                                            
+                                            st.markdown(
+                                                f"<div style='display:flex;justify-content:{align};margin-bottom:0.5rem;'>"
+                                                f"<div style='background:{color};padding:0.5rem 1rem;border-radius:12px;max-width:80%;'>"
+                                                f"<div style='font-size:0.75rem;color:#6B7280;margin-bottom:0.2rem;'>{icon} {speaker} • {timestamp}</div>"
+                                                f"{text}"
+                                                f"</div></div>", 
+                                                unsafe_allow_html=True
+                                            )
+                                    else:
+                                        st.caption("No transcript data available.")
+
+                                with tab_details:
+                                    st.write(f"**Session ID:** {session.get('session_id')}")
+                                    st.write(f"**Started:** {session.get('start_time')}")
+                                    st.write(f"**Ended:** {session.get('end_time', 'In Progress')}")
+                                    st.write(f"**Difficulty:** {session.get('difficulty')}")
+                                    st.write(f"**Mode:** {session.get('mode')}")
+                                    
+                                    meta = session.get('metadata', {})
+                                    if meta:
+                                        st.markdown("#### Candidate Metadata")
+                                        st.write(f"**Role:** {meta.get('role', 'N/A')}")
+                                        
+                                        # Human Evaluation Section
+                                        st.markdown("---")
+                                        st.subheader("👨‍⚖️ Final Hiring Decision")
+                                        
+                                        current_status = session.get('human_selection', 'Pending')
+                                        st.write(f"Current Status: **{current_status}**")
+                                        
+                                        c_eval1, c_eval2 = st.columns(2)
+                                        with c_eval1:
+                                            if st.button("✅ Select & Email", key=f"sel_{session.get('session_id')}", type="primary"):
+                                                db = get_database()
+                                                # Update Status
+                                                db.update_session_status(session.get('session_id'), 'reviewed', selection_result="Selected")
+                                                
+                                                # Send Email
+                                                user_email = session.get('user_email', 'candidate@example.com')
+                                                with st.spinner(f"Sending offer email to {user_email}..."):
+                                                    time.sleep(1.0)
+                                                    db.update_session_status(session.get('session_id'), 'reviewed', email_sent=True)
+                                                
+                                                st.success("Candidate SELECTED and Email SENT.")
+                                                st.rerun()
+
+                                        with c_eval2:
+                                            if st.button("❌ Reject & Email", key=f"rej_{session.get('session_id')}"):
+                                                db = get_database()
+                                                # Update Status
+                                                db.update_session_status(session.get('session_id'), 'reviewed', selection_result="Rejected")
+                                                
+                                                # Send Email
+                                                user_email = session.get('user_email', 'candidate@example.com')
+                                                with st.spinner(f"Sending rejection email to {user_email}..."):
+                                                    time.sleep(1.0)
+                                                    db.update_session_status(session.get('session_id'), 'reviewed', email_sent=True)
+                                                
+                                                st.warning("Candidate REJECTED and Email SENT.")
+                                                st.rerun()
+                                        
+                                        # Status Display
+                                        st.markdown("---")
+                                        if session.get('email_sent'):
+                                            st.info(f"📧 **Automated Email Sent** to `{session.get('user_email', 'candidate')}` regarding decision: **{current_status}**")
+
+                                    if meta and meta.get('resume_text'):
+                                        st.markdown("#### Resume Snippet")
+                                        st.caption(meta.get('resume_text', 'No resume text')[:500] + "...")
+
+                    else:
+                        st.info("No students have joined/completed this meeting yet.")
+            else:
+                 st.write("No active meetings created yet.")
+        else:
+            st.write("No meetings found.")
+
+    elif st.session_state.get('meeting_id') and not st.session_state.interview_started:
+         st.header(f"🎓 Joined Meeting: {st.session_state.meeting_id}")
+         st.info("You are connected to the class session.")
+         
+         # Capture Student Email for guest joiners if needed
+         if 'student_email' not in st.session_state:
+             st.session_state.student_email = st.text_input("Confirm your Email for Results:", value=st.session_state.get('current_user', {}).get('email', ''))
+
+         if st.button("Start Interview Assessment", type="primary"):
+             # Skip Wizard, use defaults or meeting configs
+             st.session_state.company_name = "Class Assessment"
+             st.session_state.role_name = "Student"
+             
+             # Check for custom questions in meeting
+             db = get_database()
+             meetings = getattr(db, 'meetings', {})
+             meeting_data = meetings.get(st.session_state.meeting_id, {})
+             custom_qs = meeting_data.get('custom_questions', [])
+             
+             start_interview_session(
+                 interview_mode=st.session_state.get('setup_interview_mode', 'Mixed'),
+                 difficulty=st.session_state.get('setup_difficulty', 'Intermediate'),
+                 num_questions=len(custom_qs) if custom_qs else st.session_state.get('setup_num_questions', 5),
+                 custom_questions=custom_qs
+             )
+             
+             # Update session with email
+             if st.session_state.get('session_id') and st.session_state.get('student_email'):
+                 # We need a way to store this email. For now, let's piggyback on update
+                 if st.session_state.get('session_id'):
+                     get_database().update_session_status(st.session_state.session_id, 'active', user_email=st.session_state.student_email)
+
+             st.rerun()
+
+    elif not st.session_state.interview_started and not st.session_state.wizard_active:
         # Redesigned landing (hero + cards)
         st.markdown("""
         <div class="greeting">
@@ -999,22 +1356,34 @@ with tab_interview:
                     pass
             
             # 2. Evaluate Answer
-            evaluation = evaluate_answer(user_answer, st.session_state.current_question, st.session_state.interview_mode, st.session_state.difficulty)
+            evaluation = evaluate_answer(
+                user_answer, 
+                st.session_state.current_question, 
+                st.session_state.interview_mode, 
+                st.session_state.difficulty,
+                api_key=st.session_state.get('gemini_api_key')
+            )
             st.session_state.current_evaluation = evaluation
             st.session_state.evaluations.append(evaluation)
             
             # 3. Log to Database
             if st.session_state.session_id:
                 db = get_database()
-                db.add_question_response(st.session_state.session_id, {
+                response_payload = {
                     'question': st.session_state.current_question['question'],
                     'answer': user_answer,
                     'evaluation': evaluation,
                     'stt_metrics': stt_result_meta,
                     'duration': stt_result_meta.get('duration',0) if stt_result_meta else 0
-                })
+                }
+                # Add ideal answer if available (from custom questions)
+                if 'ideal_answer' in st.session_state.current_question:
+                    response_payload['ideal_answer'] = st.session_state.current_question['ideal_answer']
+                
+                db.add_question_response(st.session_state.session_id, response_payload)
             
             # 4. Get Next Question or Complete Session
+            st.session_state.flow_manager.current_session['last_answer'] = user_answer # Store for follow up
             next_question = st.session_state.flow_manager.get_next_question()
             if next_question:
                 st.session_state.current_question = next_question
@@ -1064,203 +1433,145 @@ with tab_interview:
                         db.end_session(st.session_state.session_id)
                     st.rerun()
 
-        # Main two panels
-        left, right = st.columns([1,1])
-
-        # LEFT: Transcript + input mic
-        with left:
-            st.markdown("""
-            <div style='background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;padding:2rem;min-height:520px;'>
-              <div style='display:flex;flex-direction:column;align-items:center;justify-content:center;height:140px;'>
-                <div style='width:110px;height:110px;background:radial-gradient(circle,#EEF2FF,#E0E7FF);border-radius:50%;display:flex;align-items:center;justify-content:center;'>
-                  <span style='font-size:2.2rem;color:#6366F1;'>🎙️</span>
-                </div>
-              </div>
-              <div style='margin-top:1rem;font-size:.95rem;color:#1E293B;font-weight:600;'>Your interview transcript will appear here</div>
-              <div style='margin:.4rem 0 1.2rem;font-size:.75rem;color:#64748B;'>Click Record and ask interview questions</div>
-              
-              <style>
-                .transcription-box {
-                    border: 1px solid #e2e8f0;
-                    border-radius: 12px;
-                    padding: 1rem;
-                    min-height: 100px;
-                    margin: 0.5rem 0;
-                    background: #f8fafc;
-                    font-size: 1rem;
-                    line-height: 1.6;
-                    color: #1e293b;
-                    white-space: pre-wrap;
-                    overflow-y: auto;
-                    max-height: 200px;
-                }
-                .transcription-box:empty::before {
-                    content: "Your speech will appear here...";
-                    color: #94a3b8;
-                    font-style: italic;
-                }
-                .confidence-meter {
-                    height: 4px;
-                    background: #e2e8f0;
-                    border-radius: 2px;
-                    margin-top: 0.5rem;
-                    overflow: hidden;
-                }
-                .confidence-level {
-                    height: 100%;
-                    background: linear-gradient(90deg, #6366f1, #8b5cf6);
-                    width: 0%;
-                    transition: width 0.3s ease;
-                }
-              </style>
-              
-              <div class="transcription-box" id="transcriptionBox">
-                  {{TRANSCRIPTION_TEXT}}
-              </div>
-              <div class="confidence-meter">
-                  <div class="confidence-level" id="confidenceMeter" style="width: 0%;"></div>
-              </div>
-              <div style="text-align: right; color: #64748b; font-size: 0.75rem; margin-top: 0.25rem;">
-                  Confidence: <span id="confidenceValue">0</span>%
-              </div>
-              
-              <script>
-              // Function to update the transcription in real-time
-              function updateTranscription(text, confidence) {
-                  const box = document.getElementById('transcriptionBox');
-                  const meter = document.getElementById('confidenceMeter');
-                  const value = document.getElementById('confidenceValue');
-                  
-                  if (box) box.textContent = text || 'Your speech will appear here...';
-                  if (meter) meter.style.width = (confidence * 100) + '%';
-                  if (value) value.textContent = Math.round(confidence * 100);
-                  
-                  // Auto-scroll to bottom
-                  if (box) box.scrollTop = box.scrollHeight;
-              }
-              
-              // Simulate real-time updates
-              let demoText = "";
-              const demoPhrases = [
-                  "I believe my experience in machine learning makes me a strong candidate...",
-                  "One of my key achievements was developing a recommendation system that improved user engagement by 30%...",
-                  "I'm particularly excited about this role because it aligns perfectly with my skills in Python and data analysis..."
-              ];
-              
-              function simulateTranscription() {
-                  const phrase = demoPhrases[Math.floor(Math.random() * demoPhrases.length)];
-                  let i = 0;
-                  const interval = setInterval(() => {
-                      if (i < phrase.length) {
-                          demoText += phrase[i];
-                          const currentConfidence = 0.7 + Math.random() * 0.25;
-                          updateTranscription(demoText, currentConfidence);
-                          i++;
-                      } else {
-                          clearInterval(interval);
-                          // Reset after a delay
-                          setTimeout(() => {
-                              demoText = "";
-                              updateTranscription("", 0);
-                              // Start again
-                              setTimeout(simulateTranscription, 1000);
-                          }, 2000);
-                      }
-                  }, 50);
-              }
-              
-              // Start simulation after a short delay
-              setTimeout(simulateTranscription, 1500);
-              </script>
-            </div>
-            """.replace("{{TRANSCRIPTION_TEXT}}", st.session_state.get('transcription_text', '')), 
-            unsafe_allow_html=True
-        )
+        # ================= NEW VERTICAL LAYOUT (STATIC STYLE) =================
         
+        # Check if this is a connection to a meeting (Live or Async, we use Zoom-layout for all meetings)
+        is_live_meeting = False
+        if st.session_state.get('meeting_id'):
+            is_live_meeting = True
+
+        # 1. TOP: Video Interface
+        # We use a container to keep it strictly at the top
+        with st.container():
+            if is_live_meeting:
+                # Zoom-style Layout for Student: Main Interviewer, Small Self
+                # We use a 3:1 column split to create a "Stage + Sidebar" feel
+                col_live_main, col_live_side = st.columns([3, 1])
+                
+                with col_live_main:
+                    st.markdown("**🎥 Interviewer**")
+                    # Main Stage - Interviewer Feed (Placeholder for simulation)
+                    st.markdown("""
+                    <div style="width:100%; height:400px; background-color:#f1f5f9; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; border: 2px dashed #cbd5e1; color:#64748b;">
+                        <div style="font-size:4rem; margin-bottom:1rem;">👨‍💼</div>
+                        <div style="font-weight:600; font-size:1.1rem; color:#475569;">Interviewer Video Feed</div>
+                        <div style="font-size:0.9rem; margin-top:0.5rem;">(Simulation Mode)</div>
+                        <div style="font-size:0.75rem; color:#94a3b8; max-width:80%; text-align:center; margin-top:1rem;">
+                            Real-time video streaming requires a dedicated signaling server.<br>
+                            This view confirms you are connected to the session.
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                with col_live_side:
+                    st.markdown("**👤 You**")
+                    # Small Self View - Actual Camera
+                    st.camera_input("Your Camera", key="camera_feed_live_pip", label_visibility="collapsed")
+                    
+            else:
+                # Standard Solo Layout (Practice Mode)
+                col_cam_pad1, col_cam, col_cam_pad2 = st.columns([1, 2, 1])
+                with col_cam:
+                    camera_image = st.camera_input("Live Camera Feed", key="camera_feed_persistent", label_visibility="hidden")
+                
+        # 2. MIDDLE: Question Display
         if st.session_state.current_question:
             q = st.session_state.current_question
             
-            # 1. Webcam at the top (if enabled)
-            if st.session_state.get('show_camera', True):
-                st.markdown("#### 📹 Video Preview")
-                camera_image = st.camera_input("Live Camera Feed", key=f"camera_{st.session_state.question_count}", label_visibility="collapsed")
-                
-                if camera_image:
-                    st.image(camera_image, caption="✅ Camera active - Your video is being monitored", use_column_width=True)
-                else:
-                    st.markdown("""
-                    <div style='background:#EFF6FF;border:1px solid #BFDBFE;padding:1rem;border-radius:8px;text-align:center;'>
-                        <p style='margin:0;color:#1E40AF;font-size:0.875rem;'>📷 Click "Take Photo" to activate your camera</p>
-                        <p style='margin:0.5rem 0 0 0;color:#64748B;font-size:0.8rem;'>The interviewer can see you during the session</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
+            with st.container():
                 st.markdown("---")
-            
-            # 2. Question display
-            question_label = f"Q{st.session_state.question_count}"
-            
-            # Add badge for custom/follow-up questions
-            badge = ""
-            if q.get('custom_generated'):
-                badge = " <span style='background:#10B981;color:white;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.75rem;font-weight:600;margin-left:0.5rem;'>📋 TAILORED</span>"
-            elif q.get('is_follow_up'):
-                badge = " <span style='background:#F59E0B;color:white;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.75rem;font-weight:600;margin-left:0.5rem;'>↩️ FOLLOW-UP</span>"
-            
-            st.markdown(f"### {question_label}. {q['question']}{badge}", unsafe_allow_html=True)
-            
-            # TTS for the question
-            if st.session_state.speak_next_question:
-                with st.spinner("AI Speaking..."):
-                    try:
-                        audio_bytes = st.session_state.tts_engine.speak_text(q['question'])
-                        if audio_bytes:
-                            st.audio(audio_bytes, format='audio/mp3', autoplay=True)
-                    except Exception as e:
-                        st.warning(f"TTS error: {e}")
+                question_label = f"Q{st.session_state.question_count}"
+                
+                # Badge logic
+                badge = ""
+                if q.get('custom_generated'):
+                    badge = " <span style='background:#10B981;color:white;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.75rem;font-weight:600;margin-left:0.5rem;'>📋 TAILORED</span>"
+                elif q.get('is_follow_up'):
+                    badge = " <span style='background:#F59E0B;color:white;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.75rem;font-weight:600;margin-left:0.5rem;'>↩️ FOLLOW-UP</span>"
+                
+                # Display Question clearly centered
+                st.markdown(
+                    f"<div style='text-align:center;padding:1.5rem 0;background:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;margin-bottom:1.5rem;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);'>"
+                    f"<div style='color:#6B7280;font-size:0.875rem;font-weight:600;margin-bottom:0.5rem;'>QUESTION {st.session_state.question_count}</div>"
+                    f"<div style='color:#111827;font-size:1.5rem;font-weight:700;line-height:1.4;padding:0 1.5rem;'>{q['question']}</div>"
+                    f"<div style='margin-top:0.5rem;'>{badge}</div>"
+                    f"</div>", 
+                    unsafe_allow_html=True
+                )
+
+                # TTS Auto-play logic
+                if st.session_state.speak_next_question:
+                    with st.spinner("AI Speaking..."):
+                        try:
+                            audio_bytes = st.session_state.tts_engine.speak_text(q['question'])
+                            if audio_bytes:
+                                st.audio(audio_bytes, format='audio/mp3', autoplay=True)
+                        except Exception:
+                            pass
                     st.session_state.speak_next_question = False
 
-            if st.session_state.question_start_time:
-                elapsed = time.time() - st.session_state.question_start_time
-                st.caption(f"Elapsed: {elapsed:.1f}s")
+        # 3. BOTTOM: Input Controls (Restricted to Mic Only as requested)
+        st.markdown("<div style='text-align:center;margin-bottom:0.5rem;font-weight:600;'>Record your answer:</div>", unsafe_allow_html=True)
+        
+        # Center the audio input
+        input_col1, input_col2, input_col3 = st.columns([1, 1, 1])
+        with input_col2:
+            # Audio input - Disabled upload by not including file_uploader
+            audio_input = st.audio_input("Record Answer", key=f"audio_{st.session_state.question_count}", disabled=st.session_state.processing or st.session_state.paused, label_visibility="collapsed")
             
-            st.markdown("---")
-            
-            # 3. Answer submission methods
-            st.markdown("#### Answer Input")
-            
-            # Audio input widgets
-            audio_input = st.audio_input("Record answer", key=f"audio_{st.session_state.question_count}", disabled=st.session_state.processing or st.session_state.paused)
-            uploaded = st.file_uploader("Upload audio (wav)", type=['wav'], key=f"upload_{st.session_state.question_count}")
-            
-            # Typed input with unique key per question
-            typed_answer = st.text_area("Type answer (optional)", key=f"typed_answer_{st.session_state.question_count}", value="")
-            submit_typed = st.button("Submit Typed Answer", use_container_width=True, disabled=st.session_state.processing or st.session_state.paused or not typed_answer.strip())
-                
-        # Process audio answer (recorded or uploaded)
+            # Optional: Keep typed answer for accessibility, but hidden in expander
+            with st.expander("⌨️  Type answer instead"):
+                typed_answer = st.text_area("Written Response", key=f"typed_answer_{st.session_state.question_count}")
+                submit_typed = st.button("Submit Text", use_container_width=True)
+
+        with input_col3:
+            # Next button (Right aligned visually)
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Skip / Next ➜", help="Skip this question without answering if stuck."):
+                 # Mark as skipped in database
+                 if st.session_state.session_id:
+                     db = get_database()
+                     # Dummy empty answer
+                     db.add_question_response(st.session_state.session_id, {
+                        'question': st.session_state.current_question['question'],
+                        'answer': "[SKIPPED]",
+                        'evaluation': {'overall_score': 0, 'feedback': {'strengths': [], 'weaknesses': ['Question skipped'], 'suggestions': []}},
+                        'stt_metrics': {}
+                    })
+                 
+                 # Move flow
+                 next_q = st.session_state.flow_manager.get_next_question()
+                 if next_q:
+                     st.session_state.current_question = next_q
+                     st.session_state.question_count += 1
+                     st.session_state.speak_next_question = True
+                 else:
+                     st.session_state.session_complete = True
+                     if st.session_state.session_id:
+                        get_database().end_session(st.session_state.session_id)
+                 st.rerun()
+
+        # Logic to process answer
         if not st.session_state.processing and not st.session_state.paused:
-            if audio_input is not None or uploaded is not None:
+            # 1. Process Audio
+            if audio_input is not None:
                 st.session_state.processing = True
-                with st.spinner("🔄 Processing your answer..."):
+                with st.spinner("🔄 AI Analyzing your response..."):
                     try:
-                        # Choose source
-                        audio_source = audio_input if audio_input is not None else uploaded
-                        stt_result = transcribe_audio(audio_source, engine=st.session_state.stt_engine_name)
-                        
+                        stt_result = transcribe_audio(audio_input, engine=st.session_state.stt_engine_name)
                         if stt_result['success']:
                             st.session_state.stt_metrics = stt_result
                             _process_answer(stt_result['text'], stt_result)
                         else:
                             st.error(f"❌ {stt_result.get('error', 'Could not process audio')}")
                     except Exception as e:
-                        st.error(f"❌ An error occurred: {str(e)}")
+                        st.error(f"❌ Error: {str(e)}")
                     finally:
                         st.session_state.processing = False
                         st.rerun()
-        
-        # Process typed answer
-        if submit_typed:
-            if typed_answer and typed_answer.strip():
+
+            # 2. Process Typed
+            elif submit_typed and typed_answer.strip():
                 st.session_state.processing = True
                 _process_answer(typed_answer.strip(), stt_result_meta={})
                 st.session_state.processing = False
@@ -1504,7 +1815,25 @@ with tab_settings:
     with settings_tabs[2]:  # Evaluation Settings
         st.markdown("#### Evaluation & Feedback")
         
-        st.markdown("**Scoring**")
+        # New: LLM Configuration
+        st.markdown("**🧠 AI Model Configuration**")
+        st.info("To get the **best output**, use a free Google Gemini API Key.")
+        gemini_key = st.text_input("Google Gemini API Key", value=st.session_state.get('gemini_api_key', ''), type="password", help="Get a free key from Google AI Studio")
+        if gemini_key:
+            st.session_state.gemini_api_key = gemini_key
+            # Save to user profile if logged in
+            if st.session_state.get('logged_in') and st.session_state.get('current_user'):
+                db = get_database()
+                username = st.session_state.current_user.get('username')
+                if username:
+                    db.update_user_api_key(username, gemini_key)
+            st.success("✅ Advanced LLM Evaluation Enabled (Saved to Profile)")
+        else:
+            st.warning("⚠️ Using local lightweight models. Output quality may be limited.")
+        
+        st.divider()
+
+        st.markdown("**Scoring Weights**")
         col1, col2 = st.columns(2)
         with col1:
             st.slider("Technical Weight", 0, 100, 50, help="How much weight to give technical accuracy in scoring")

@@ -25,13 +25,14 @@ except ImportError:
 class InterviewDatabase:
     """Hybrid database supporting both JSON files and MongoDB"""
     
-    def __init__(self, db_path: str = "data/interview_sessions.json", users_path: str = "data/users.json", mongo_uri: str = None):
+    def __init__(self, db_path: str = "data/interview_sessions.json", users_path: str = "data/users.json", meetings_path: str = "data/meetings.json", mongo_uri: str = None):
         """
         Initialize database
         
         Args:
             db_path: Path to JSON database file
             users_path: Path to JSON users file
+            meetings_path: Path to JSON meetings file
             mongo_uri: MongoDB connection string (optional)
         """
         self.use_mongo = False
@@ -52,8 +53,10 @@ class InterviewDatabase:
 
         self.db_path = db_path
         self.users_path = users_path
+        self.meetings_path = meetings_path
         self.sessions = []
         self.users = {}
+        self.meetings = {}
         
         if not self.use_mongo:
             # Create directory if it doesn't exist
@@ -61,6 +64,7 @@ class InterviewDatabase:
             # Load existing data
             self._load_database()
             self._load_users()
+            self._load_meetings()
     
     def _ensure_data_directory(self, path):
         """Ensure data directory exists and is writable"""
@@ -138,7 +142,47 @@ class InterviewDatabase:
                     pass
             return False
 
-    def register_user(self, username, password, full_name=""):
+    def _load_meetings(self):
+        """Load meetings from file or MongoDB"""
+        if self.use_mongo:
+            return
+            
+        try:
+            if os.path.exists(self.meetings_path):
+                with open(self.meetings_path, 'r', encoding='utf-8') as f:
+                    self.meetings = json.load(f)
+                logger.info(f"Loaded {len(self.meetings)} meetings from database")
+            else:
+                if self._ensure_data_directory(self.meetings_path):
+                    self.meetings = {}
+                    with open(self.meetings_path, 'w', encoding='utf-8') as f:
+                        json.dump({}, f)
+                else:
+                    logger.error("Failed to initialize meetings database")
+        except Exception as e:
+            logger.error(f"Error loading meetings: {e}")
+            self.meetings = {}
+
+    def _save_meetings(self):
+        """Save meetings to file"""
+        if self.use_mongo:
+            return
+
+        try:
+            temp_path = f"{self.meetings_path}.tmp"
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(self.meetings, f, indent=2)
+            
+            if os.path.exists(self.meetings_path):
+                os.replace(temp_path, self.meetings_path)
+            else:
+                os.rename(temp_path, self.meetings_path)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save meetings: {e}")
+            return False
+
+    def register_user(self, username, password, full_name="", role="student", email=""):
         """Register a new user"""
         # Basic hash
         hashed_pw = hashlib.sha256(password.encode()).hexdigest()
@@ -146,6 +190,8 @@ class InterviewDatabase:
             "username": username,
             "password": hashed_pw,
             "full_name": full_name,
+            "role": role,
+            "email": email,
             "created_at": datetime.now().isoformat()
         }
 
@@ -161,10 +207,64 @@ class InterviewDatabase:
             self.users[username] = {
                 "password": hashed_pw,
                 "full_name": full_name,
+                "role": role,
+                "email": email,
                 "created_at": datetime.now().isoformat()
             }
             self._save_users()
             return True, "Registration successful"
+
+    def create_meeting(self, interviewer_username, meeting_type="async", custom_questions=None):
+        """
+        Create a new meeting ID
+        
+        Args:
+            interviewer_username: Username of creator
+            meeting_type: 'async' or 'live'
+            custom_questions: List of dictionaries [{'question': '...', 'expected_answer': '...'}]
+        """
+        import random
+        import string
+        
+        meeting_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        meeting_data = {
+            "created_by": interviewer_username,
+            "created_at": datetime.now().isoformat(),
+            "active": True,
+            "type": meeting_type,
+            "participants": [],
+            "custom_questions": custom_questions or []
+        }
+        
+        if self.use_mongo:
+            self.db.meetings.insert_one({"_id": meeting_id, **meeting_data})
+        else:
+            self.meetings[meeting_id] = meeting_data
+            self._save_meetings()
+            
+        return meeting_id
+
+    def verify_meeting(self, meeting_id):
+        """Verify if a meeting ID exists and is active"""
+        if self.use_mongo:
+            meeting = self.db.meetings.find_one({"_id": meeting_id})
+            return bool(meeting and meeting.get('active', True))
+        else:
+            meeting = self.meetings.get(meeting_id)
+            return bool(meeting and meeting.get('active', True))
+
+    def delete_meeting(self, meeting_id):
+        """Permanently delete a meeting"""
+        if self.use_mongo:
+            self.db.meetings.delete_one({"_id": meeting_id})
+            # Optionally also remove associated sessions if desired, but keeping them might be safer for history
+            return True
+        else:
+            if meeting_id in self.meetings:
+                del self.meetings[meeting_id]
+                self._save_meetings()
+                return True
+            return False
 
     def authenticate_user(self, username, password):
         """Authenticate a user"""
@@ -180,9 +280,27 @@ class InterviewDatabase:
                 return False, "User not found"
             
             if self.users[username]["password"] == hashed_pw:
-                return True, self.users[username]
+                # Inject username into result for consistency
+                user_obj = self.users[username].copy()
+                user_obj['username'] = username
+                return True, user_obj
             else:
                 return False, "Invalid password"
+
+    def update_user_api_key(self, username, api_key):
+        """Update user's API key"""
+        if self.use_mongo:
+             self.db.users.update_one(
+                {"username": username},
+                {"$set": {"api_key": api_key}}
+            )
+             return True
+        else:
+            if username in self.users:
+                self.users[username]["api_key"] = api_key
+                self._save_users()
+                return True
+            return False
 
     def _load_database(self):
         """Load database from file"""
@@ -240,7 +358,7 @@ class InterviewDatabase:
                     pass
             return False
 
-    def create_session(self, mode: str, difficulty: str, user_name: str = "Anonymous", metadata: Optional[Dict] = None) -> str:
+    def create_session(self, mode: str, difficulty: str, user_name: str = "Anonymous", metadata: Optional[Dict] = None, meeting_id: str = None) -> str:
         """
         Create a new interview session
         
@@ -248,11 +366,13 @@ class InterviewDatabase:
             mode: Interview mode (HR/Technical/Mixed)
             difficulty: Difficulty level
             user_name: User's name
+            metadata: Additional metadata
+            meeting_id: Meeting ID if applicable
             
         Returns:
             Session ID
         """
-        session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(hash(datetime.now()))[-6:]}"
         
         session = {
             'session_id': session_id,
@@ -264,9 +384,15 @@ class InterviewDatabase:
             'questions': [],
             'overall_score': 0,
             'status': 'active',
-            'metadata': metadata or {}
+            'metadata': metadata or {},
+            'meeting_id': meeting_id,
+            'transcript': []
         }
         
+        if self.use_mongo:
+             self.db.sessions.insert_one(session)
+             return session_id
+
         self.sessions.append(session)
         self._save_database()
         
@@ -356,6 +482,13 @@ class InterviewDatabase:
         """
         return self._get_session(session_id)
     
+    def get_meetings_by_creator(self, username):
+        """Get all meetings created by a specific user"""
+        if self.use_mongo:
+             return list(self.db.meetings.find({"created_by": username}))
+        else:
+            return {k: v for k, v in self.meetings.items() if v.get('created_by') == username}
+
     def _get_session(self, session_id: str) -> Optional[Dict]:
         """Internal method to get session"""
         for session in self.sessions:
@@ -363,18 +496,39 @@ class InterviewDatabase:
                 return session
         return None
     
-    def get_user_sessions(self, user_name: str) -> List[Dict]:
-        """
-        Get all sessions for a user
-        
-        Args:
-            user_name: User's name
+    def update_session_status(self, session_id, status, selection_result=None, email_sent=False):
+        """Update session final status and emailing"""
+        session = self._get_session(session_id)
+        if session:
+            session['status'] = status # e.g., 'reviewed'
+            if selection_result:
+                session['human_selection'] = selection_result # 'Selected' or 'Rejected'
+            if email_sent:
+                session['email_sent'] = True
             
-        Returns:
-            List of session dictionaries
-        """
+            if self.use_mongo:
+                update_fields = {"status": status}
+                if selection_result: update_fields["human_selection"] = selection_result
+                if email_sent: update_fields["email_sent"] = True
+                self.db.sessions.update_one({"session_id": session_id}, {"$set": update_fields})
+            else:
+                self._save_database()
+            return True
+        return False
+        
+    def get_user_sessions(self, user_name: str) -> List[Dict]:
+        """Get all sessions for a user"""
+        if self.use_mongo:
+            return list(self.db.sessions.find({"user_name": user_name}))
         return [s for s in self.sessions if s['user_name'] == user_name]
-    
+
+    def get_sessions_by_meeting(self, meeting_id: str) -> List[Dict]:
+        """Get all sessions associated with a meeting ID"""
+        if self.use_mongo:
+            return list(self.db.sessions.find({"meeting_id": meeting_id}))
+        # Filter sessions where meeting_id matches
+        return [s for s in self.sessions if s.get('meeting_id') == meeting_id]
+
     def get_recent_sessions(self, limit: int = 10) -> List[Dict]:
         """
         Get most recent sessions
@@ -436,20 +590,23 @@ class InterviewDatabase:
         completeness_scores = []
         
         for q in questions:
-            eval_data = q['evaluation']
-            technical_scores.append(eval_data['technical_accuracy'])
-            communication_scores.append(eval_data['communication_skills'])
-            sentiment_scores.append(eval_data['sentiment_tone'])
-            completeness_scores.append(eval_data['completeness'])
+            eval_data = q.get('evaluation', {})
+            technical_scores.append(eval_data.get('technical_accuracy', 0))
+            communication_scores.append(eval_data.get('communication_skills', 0))
+            sentiment_scores.append(eval_data.get('sentiment_tone', 0))
+            completeness_scores.append(eval_data.get('completeness', 0))
+        
+        # Avoid division by zero
+        count = len(questions) or 1
         
         return {
             'total_questions': len(questions),
-            'average_score': session['overall_score'],
+            'average_score': session.get('overall_score', 0),
             'skill_breakdown': {
-                'technical_accuracy': sum(technical_scores) / len(technical_scores),
-                'communication_skills': sum(communication_scores) / len(communication_scores),
-                'sentiment_tone': sum(sentiment_scores) / len(sentiment_scores),
-                'completeness': sum(completeness_scores) / len(completeness_scores)
+                'technical_accuracy': sum(technical_scores) / count,
+                'communication_skills': sum(communication_scores) / count,
+                'sentiment_tone': sum(sentiment_scores) / count,
+                'completeness': sum(completeness_scores) / count
             },
             'duration_minutes': self._calculate_duration(session),
             'questions_passed': sum(1 for q in questions 

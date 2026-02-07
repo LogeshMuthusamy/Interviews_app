@@ -135,17 +135,21 @@ class InterviewReportGenerator:
             self.pdf.ln(2)
             
             # Scores
-            eval_data = q_data['evaluation']
+            eval_data = q_data.get('evaluation', {})
+            score = eval_data.get('overall_score', 0)
+            grade = eval_data.get('grade', 'N/A')
+            
             self.pdf.set_font('Arial', 'B', 10)
-            self.pdf.cell(0, 6, f"Score: {eval_data['overall_score']}/100 - {eval_data['grade']}", 0, 1)
+            self.pdf.cell(0, 6, f"Score: {score}/100 - {grade}", 0, 1)
             
             # Feedback
             self.pdf.set_font('Arial', '', 9)
-            strengths = eval_data['feedback'].get('strengths', [])
+            feedback = eval_data.get('feedback', {})
+            strengths = feedback.get('strengths', [])
             if strengths:
                 self.pdf.cell(0, 6, f"Strengths: {', '.join(strengths[:2])}", 0, 1)
             
-            weaknesses = eval_data['feedback'].get('weaknesses', [])
+            weaknesses = feedback.get('weaknesses', [])
             if weaknesses:
                 self.pdf.cell(0, 6, f"Areas for Improvement: {', '.join(weaknesses[:2])}", 0, 1)
             
@@ -183,7 +187,8 @@ class InterviewReportGenerator:
         # Collect all suggestions
         all_suggestions = []
         for q_data in session_data['questions']:
-            suggestions = q_data['evaluation']['feedback'].get('suggestions', [])
+            feedback = q_data.get('evaluation', {}).get('feedback', {})
+            suggestions = feedback.get('suggestions', [])
             all_suggestions.extend(suggestions)
         
         # Get unique suggestions
@@ -254,14 +259,17 @@ class InterviewReportGenerator:
                 f.write(f"Q: {q_data['question']}\n")
                 f.write(f"A: {q_data['answer']}\n\n")
                 
-                eval_data = q_data['evaluation']
-                f.write(f"Score: {eval_data['overall_score']}/100 - {eval_data['grade']}\n")
+                eval_data = q_data.get('evaluation', {})
+                score = eval_data.get('overall_score', 0)
+                grade = eval_data.get('grade', 'N/A')
+                f.write(f"Score: {score}/100 - {grade}\n")
                 
-                if eval_data['feedback'].get('strengths'):
-                    f.write(f"Strengths: {', '.join(eval_data['feedback']['strengths'])}\n")
+                feedback = eval_data.get('feedback', {})
+                if feedback.get('strengths'):
+                    f.write(f"Strengths: {', '.join(feedback['strengths'])}\n")
                 
-                if eval_data['feedback'].get('weaknesses'):
-                    f.write(f"Weaknesses: {', '.join(eval_data['feedback']['weaknesses'])}\n")
+                if feedback.get('weaknesses'):
+                    f.write(f"Weaknesses: {', '.join(feedback['weaknesses'])}\n")
                 
                 f.write("-"*60 + "\n")
         

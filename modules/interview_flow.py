@@ -11,6 +11,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Optional: Google Gemini
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
 
 class InterviewFlowManager:
     """Manages the flow of interview questions and follow-ups"""
@@ -25,8 +32,21 @@ class InterviewFlowManager:
         self.questions_path = questions_path
         self.questions_bank = {}
         self.current_session = None
+        self.api_key = None
+        self.llm_model = None
         self.load_questions()
     
+    def configure_llm(self, api_key: str):
+        """Configure LLM for dynamic generation"""
+        if api_key and GEMINI_AVAILABLE:
+            try:
+                genai.configure(api_key=api_key)
+                self.llm_model = genai.GenerativeModel('gemini-pro')
+                self.api_key = api_key
+                logger.info("Questions LLM Configured")
+            except Exception as e:
+                logger.error(f"Failed to config LLM: {e}")
+
     def load_questions(self):
         """Load questions from JSON file"""
         try:
@@ -42,7 +62,9 @@ class InterviewFlowManager:
     
     def start_session(self, mode: str, difficulty: str, 
                      num_questions: int = 5, target_keywords: Optional[List[str]] = None,
-                     resume_text: str = "", job_description: str = "") -> Dict:
+                     resume_text: str = "", job_description: str = "",
+                     custom_questions_list: Optional[List[Dict]] = None,
+                     api_key: str = None) -> Dict:
         """
         Start a new interview session
         
@@ -53,33 +75,58 @@ class InterviewFlowManager:
             target_keywords: Keywords extracted from resume/job description
             resume_text: Full resume text for generating custom questions
             job_description: Full job description for generating custom questions
+            custom_questions_list: hardcoded list of questions provided by interviewer
+            api_key: Optional Gemini API Key
             
         Returns:
             Session configuration dictionary
         """
-        available = self._get_questions_for_session(mode, difficulty)
-        
-        # Generate custom questions based on resume content
-        custom_questions = []
-        if resume_text or job_description:
-            custom_questions = self._generate_resume_based_questions(
-                resume_text, job_description, mode, difficulty, target_keywords or []
-            )
-        
-        # Combine custom and default questions
-        if custom_questions:
-            # Add custom questions at the beginning (they're most relevant)
-            available = custom_questions + available
-            logger.info(f"Added {len(custom_questions)} custom questions based on resume/JD")
-        
-        # If we have target keywords, prioritize matching questions
-        if target_keywords:
-            keyword_set = set(kw.lower() for kw in target_keywords if kw)
-            def score_question(q):
-                qk = [k.lower() for k in q.get('keywords', [])]
-                return len(keyword_set.intersection(qk))
-            # Sort by descending score, keep random order within same score
-            available = sorted(available, key=lambda q: (score_question(q), random.random()), reverse=True)
+        # Configure LLM if key provided
+        if api_key:
+            self.configure_llm(api_key)
+
+        # 1. If explicit custom questions are provided (from Interviewer), use them exclusively or prioritize them
+        if custom_questions_list:
+            available = custom_questions_list
+            num_questions = len(custom_questions_list) # Override count
+            logger.info(f"Using {len(custom_questions_list)} forced custom questions from interviewer")
+        else:
+            # 2. Dynamic Generation (LLM or Template)
+            available = []
+            
+            # Try LLM Generation first if available
+            if self.llm_model and (resume_text or job_description):
+                try:
+                    logger.info("Attempting LLM question generation...")
+                    available = self._generate_questions_with_llm(
+                        resume_text, job_description, mode, difficulty, num_questions
+                    )
+                except Exception as e:
+                    logger.error(f"LLM Generation failed: {e}")
+                    available = [] # Fallback
+            
+            # Fallback to standard logic if LLM failed or not available
+            if not available:
+                available = self._get_questions_for_session(mode, difficulty)
+                
+                # Generate custom questions based on resume content (Template based)
+                custom_generated = []
+                if resume_text or job_description:
+                    custom_generated = self._generate_resume_based_questions(
+                        resume_text, job_description, mode, difficulty, target_keywords or []
+                    )
+                
+                # Combine custom and default questions
+                if custom_generated:
+                    available = custom_generated + available
+                
+                # Sort/Prioritize
+                if target_keywords:
+                    keyword_set = set(kw.lower() for kw in target_keywords if kw)
+                    def score_question(q):
+                        qk = [k.lower() for k in q.get('keywords', [])]
+                        return len(keyword_set.intersection(qk))
+                    available = sorted(available, key=lambda q: (score_question(q), random.random()), reverse=True)
 
         self.current_session = {
             'mode': mode,
@@ -88,7 +135,8 @@ class InterviewFlowManager:
             'current_index': 0,
             'questions_asked': [],
             'available_questions': available,
-            'follow_up_needed': False
+            'follow_up_needed': False,
+            'last_answer': None # Track for follow-ups
         }
         
         return self.current_session
@@ -167,12 +215,64 @@ class InterviewFlowManager:
         
         return False
     
+    def _generate_questions_with_llm(self, resume: str, jd: str, mode: str, difficulty: str, count: int) -> List[Dict]:
+        """Generate tailored questions using Gemini"""
+        prompt = f"""
+        Act as an expert {mode} interviewer.
+        Generate {count} unique, challenging interview questions for a {difficulty} level candidate based on the following context.
+        
+        Resume Summary: {resume[:2000]}...
+        Job Description: {jd[:1000]}...
+        
+        Return the output as a strictly valid JSON list of objects.
+        Each object must have these keys: "question", "keywords" (list of strings), "expected_duration" (int seconds), "ideal_answer" (brief string).
+        
+        Example: [{{ "question": "...", "keywords": ["..."], "expected_duration": 60, "ideal_answer": "..." }}]
+        Do not use markdown formatting.
+        """
+        
+        response = self.llm_model.generate_content(prompt)
+        text = response.text.strip().replace('```json', '').replace('```', '')
+        questions = json.loads(text)
+        
+        # Tag them
+        for q in questions:
+            q['custom_generated'] = True
+            
+        return questions
+
     def _generate_follow_up(self) -> Optional[Dict]:
         """Generate a contextual follow-up question"""
         if not self.current_session['questions_asked']:
             return None
-        
+            
         last_question = self.current_session['questions_asked'][-1]
+        
+        # Try LLM Follow up
+        if self.llm_model and self.current_session.get('last_answer'):
+            try:
+                prompt = f"""
+                The candidate just answered a question.
+                Question: "{last_question['question']}"
+                Answer: "{self.current_session['last_answer']}"
+                
+                Generate a short, single sentence follow-up question to dig deeper, clarify, or challenge the candidate.
+                Return ONLY the question text.
+                """
+                response = self.llm_model.generate_content(prompt)
+                follow_up_text = response.text.strip()
+                
+                return {
+                    'question': follow_up_text,
+                    'keywords': last_question.get('keywords', []),
+                    'expected_duration': 60,
+                    'is_follow_up': True,
+                    'original_question': last_question['question']
+                }
+            except Exception as e:
+                logger.error(f"LLM Followup failed: {e}")
+        
+        # Fallback to Template
         reason = self.current_session.get('follow_up_reason', 'generic')
         
         # Follow-up templates based on reason
