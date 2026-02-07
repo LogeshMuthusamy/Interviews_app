@@ -1,5 +1,9 @@
 # AI-Powered Virtual Interview Practice Application
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://hireprepai.streamlit.app/)
+
+**🚀 Live Demo:** [Access the App Here](https://hireprepai.streamlit.app/)
+
 ## 🎯 Project Overview
 
 This is a comprehensive AI-powered virtual interview practice application built with Streamlit. It simulates realistic interview scenarios, provides accurate evaluation using advanced NLP models, and delivers actionable feedback to help users improve their interview skills.
@@ -119,21 +123,18 @@ streamlit run app.py
 ### Using the Application
 
 1. **Configure Your Interview**
-
    - Enter your name
    - Select interview mode (HR/Technical/Mixed)
    - Choose difficulty level
    - Set number of questions (3-10)
 
 2. **Start Interview**
-
    - Click "🚀 Start Interview" in the sidebar
    - Read the question displayed
    - Click the microphone button to record your answer
    - Speak clearly and naturally
 
 3. **Review Feedback**
-
    - View instant scores for each answer
    - Review strengths and improvement areas
    - Check speech metrics (WPM, clarity, filler words)
