@@ -61,9 +61,26 @@ footer {visibility: hidden;}
     max-width: 100% !important;
 }
 
-/* App background */
+/* App background - Force Light Mode colors */
 .stApp {
     background: #f3f4f6;
+    color: #1f2937;
+}
+
+/* Force text color for Markdown and basic text to ensure visibility */
+.stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6 {
+    color: #1f2937 !important;
+}
+
+/* Fix specific inputs that might inherit dark mode styles */
+.stRadio label p, .stCheckbox label p {
+    color: #1f2937 !important;
+}
+
+/* Ensure input fields have dark text on white background */
+.stTextInput input, .stSelectbox, .stTextArea textarea {
+    color: #1f2937 !important;
+    background-color: #ffffff !important;
 }
 
 /* Login Card Styling */
