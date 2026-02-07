@@ -13,6 +13,10 @@ from io import BytesIO
 from pathlib import Path
 import shutil
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -270,7 +274,7 @@ def initialize_session_state():
         'question_start_time': None,
         'current_evaluation': None,
         'stt_metrics': {},
-        'gemini_api_key': 'AIzaSyAbT8ORcdCd5qqlMPS-p7R2yFaOf2cdbzo' 
+        'gemini_api_key': os.getenv('GEMINI_API_KEY', '') 
     }
     
     # Initialize session state with defaults
